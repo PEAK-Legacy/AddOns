@@ -1,9 +1,9 @@
-======================================
-Separating Concerns Using Object Roles
-======================================
+========================================
+Separating Concerns Using Object Add-Ons
+========================================
 
 (NEW in version 0.6: the``Registry`` base class, and the
-``ClassRole.for_frame()`` classmethod.)
+``ClassAddOn.for_frame()`` classmethod.)
 
 In any sufficiently-sized application or framework, it's common to end up
 lumping a lot of different concerns into the same class.  For example, you
@@ -12,23 +12,23 @@ class.  Attribute and method names for all sorts of different operations get
 shoved into a single namespace -- even when using mixin classes.
 
 Separating concerns into different objects, however, makes it easier to write
-reusable and separately-testable components.  The ObjectRoles package
-(``peak.util.roles``) lets you manage concerns using ``Role`` classes.
+reusable and separately-testable components.  The AddOns package
+(``peak.util.addons``) lets you manage concerns using ``AddOn`` classes.
 
-``Role`` classes are like dynamic mixins, but with their own private attribute
-and method namespaces.  A concern implemented using roles can be added at
+``AddOn`` classes are like dynamic mixins, but with their own private attribute
+and method namespaces.  A concern implemented using add-ons can be added at
 runtime to any object that either has a writable ``__dict__`` attribute, or
 is weak-referenceable.
 
-``Role`` classes are also like adapters, but rather than creating a new
+``AddOn`` classes are also like adapters, but rather than creating a new
 instance each time you ask for one, an existing instance is returned if
-possible.  In this way, roles can keep track of ongoing state.  For example,
-a ``Persistence`` role might keep track of whether its subject has been saved
+possible.  In this way, add-ons can keep track of ongoing state.  For example,
+a ``Persistence`` add-on might keep track of whether its subject has been saved
 to disk yet::
 
-    >>> from peak.util.roles import Role
+    >>> from peak.util.addons import AddOn
 
-    >>> class Persistence(Role):
+    >>> class Persistence(AddOn):
     ...     saved = True
     ...     def changed(self):
     ...         self.saved = False
@@ -51,26 +51,26 @@ to disk yet::
 
 This makes it easy for us to, for example, write a loop that saves a bunch of
 objects, because we don't need to concern ourselves with initializing the
-state of the persistence role.  A class doesn't need to inherit from a special
-base in order to be able to have this state tracked, and it doesn't need to
-know *how* to initialize it, either.
+state of the persistence add-on.  A class doesn't need to inherit from a
+special base in order to be able to have this state tracked, and it doesn't
+need to know *how* to initialize it, either.
 
 Of course, in the case of persistence, a class does need to know *when* to call
 the persistence methods, to indicate changedness and to request saving.
-However, a library providing such a role can also provide decorators and other
-tools to make this easier, while still remaining largely independent of the
-objects involved.
+However, a library providing such an add-on can also provide decorators and
+other tools to make this easier, while still remaining largely independent of
+the objects involved.
 
-Indeed, the ObjectRoles library was actually created to make it easier to
-implement functionality using function or method decorators.  For example, one
-can create a ``@synchronized`` decorator that safely locks an object -- see
-the example below under `Threading Concerns`_.
+Indeed, the AddOns library was actually created to make it easier to implement
+functionality using function or method decorators.  For example, one can create
+a ``@synchronized`` decorator that safely locks an object -- see the example
+below under `Threading Concerns`_.
 
-In summary, the ObjectRoles library provides you with a basic form of AOP,
-that lets you attach (or "introduce", in AspectJ terminology) additional
-attributes and methods to an object, using a private namespace.  (If you also
-want to do AspectJ-style "advice", the PEAK-Rules package can be used to do
-"before", "after", and "around" advice in combination with ObjectRoles.)
+In summary, the AddOns library provides you with a basic form of AOP, that lets
+you attach (or "introduce", in AspectJ terminology) additional attributes and
+methods to an object, using a private namespace.  (If you also want to do
+AspectJ-style "advice", the PEAK-Rules package can be used to do "before",
+"after", and "around" advice in combination with add-ons.)
 
 
 .. contents:: **Table of Contents**
@@ -79,7 +79,7 @@ want to do AspectJ-style "advice", the PEAK-Rules package can be used to do
 Basic API
 ---------
 
-If you need to, you can query for the existence of a Role::
+If you need to, you can query for the existence of an add-on::
 
     >>> Persistence.exists_for(aThing)
     True
@@ -112,28 +112,28 @@ Until/unless you delete it (or its subject is garbage collected)::
     False
 
 
-Role Keys and Instances
------------------------
+AddOn Keys and Instances
+------------------------
 
-Roles are stored either in their subject's ``__dict__``, or if it does not have
-one (or is a new-style class with a read-only ``__dict__``), they are stored in
-a special dictionary linked to the subject via a weak reference.
+Add-ons are stored either in their subject's ``__dict__``, or if it does not
+have one (or is a type object with a read-only ``__dict__``), they are
+stored in a special dictionary linked to the subject via a weak reference.
 
-By default, the dictionary key is the role class, so there is exactly one role
-instance per subject::
+By default, the dictionary key is the add-on class, so there is exactly one
+add-on instance per subject::
 
     >>> aThing.__dict__
     {<class 'Persistence'>: <Persistence object at...>}
 
-But in some cases, you may wish to have more than one instance of a given role
-class for a subject.  (For example, PEAK-Rules uses roles to represent indexes
-on different expressions contained within rules.)  For this purpose, you can
-redefine your Role's ``__init__`` method to accept additional arguments besides
-its subject.  The additional arguments become part of the key that instances
-are stored under, such that more than one role instance can exist for a given
-object::
+But in some cases, you may wish to have more than one instance of a given
+add-on class for a subject.  (For example, PEAK-Rules uses add-ons to represent
+indexes on different expressions contained within rules.)  For this purpose,
+you can redefine your AddOn's ``__init__`` method to accept additional
+arguments besides its subject.  The additional arguments become part of the key
+that instances are stored under, such that more than one add-on instance can
+exist for a given object::
 
-    >>> class Index(Role, dict):
+    >>> class Index(AddOn, dict):
     ...     def __init__(self, subject, expression):
     ...         self.expression = expression
 
@@ -160,26 +160,26 @@ object::
     >>> Index.exists_for(anotherThing, 'q==42')
     False
 
-By default, a role class' key is either the class by itself, or a tuple
+By default, an add-on class' key is either the class by itself, or a tuple
 containing the class, followed by any arguments that appeared in the
-constructor call after the role's subject.  However, you can redefine the
-``role_key()`` classmethod in your subclass, and change it to do something
-different.  For example, you could make different role classes generate
+constructor call after the add-on's subject.  However, you can redefine the
+``addon_key()`` classmethod in your subclass, and change it to do something
+different.  For example, you could make different add-on classes generate
 overlapping keys, or you could use attributes of the arguments to generate the
-key.  You could even generate a string key, to cause the role to be attached
+key.  You could even generate a string key, to cause the add-on to be attached
 as an attribute!::
 
-    >>> class Leech(Role):
-    ...     def role_key(cls):
+    >>> class Leech(AddOn):
+    ...     def addon_key(cls):
     ...         return "__leech__"
-    ...     role_key = classmethod(role_key)
+    ...     addon_key = classmethod(addon_key)
 
     >>> something = Thing()
 
     >>> Leech(something) is something.__leech__
     True
 
-The ``role_key`` method only receives the arguments that appear *after* the
+The ``addon_key`` method only receives the arguments that appear *after* the
 subject in the constructor call.  So, in the case above, it receives no
 arguments.  Had we called it with additional arguments, we'd have gotten an
 error::
@@ -187,25 +187,25 @@ error::
     >>> Leech(something, 42)
     Traceback (most recent call last):
       ...
-    TypeError: role_key() takes exactly 1 argument (2 given)
+    TypeError: addon_key() takes exactly 1 argument (2 given)
 
-Naturally, your ``role_key()`` and ``__init__()`` (and/or ``__new__()``)
+Naturally, your ``addon_key()`` and ``__init__()`` (and/or ``__new__()``)
 methods should also agree on how many arguments there can be, and what they
 mean!
 
-In general, you should include your role class (or some role class) as part of
-your key, so as to make collisions with other people's role classes impossible.
-Keys should also be designed for thread-safety, where applicable.  (See
-the section below on `Threading Concerns`_ for more details.)
+In general, you should include your add-on class (or some add-on class) as part
+of your key, so as to make collisions with other people's add-on classes
+impossible.  Keys should also be designed for thread-safety, where applicable.
+(See the section below on `Threading Concerns`_ for more details.)
 
 
 Role Storage and Garbage Collection
 -----------------------------------
 
-By the way, the approach above of using an string as a role key won't always
-make the role into an attribute of the subject!  If an object doesn't have a
-``__dict__``, or that ``__dict__`` isn't writable (as in the case of new-style
-classes), then the role is stored in a weakly-keyed dictionary, maintained
+By the way, the approach above of using an string as an add-on key won't always
+make the add-on into an attribute of the subject!  If an object doesn't have a
+``__dict__``, or that ``__dict__`` isn't writable (as in the case of type
+objects), then the add-on is stored in a weakly-keyed dictionary, maintained
 elsewhere::
 
     >>> class NoDict(object):
@@ -222,7 +222,7 @@ elsewhere::
     AttributeError: 'NoDict' object has no attribute '__leech__'
 
 Of course, if an object doesn't have a dictionary *and* isn't
-weak-referenceable, there's simply no way to store a role for it::
+weak-referenceable, there's simply no way to store an add-on for it::
 
     >>> ob = object()
     >>> Leech(ob)
@@ -230,22 +230,22 @@ weak-referenceable, there's simply no way to store a role for it::
       ...
     TypeError: cannot create weak reference to 'object' object
 
-However, there is a ``roledict_for()`` function in the ``peak.util.roles``
+However, there is an ``addons_for()`` function in the ``peak.util.addons``
 module that you can extend using PEAK-Rules advice.  Once you add a method to
-support a type that otherwise can't be used with roles, you should be able to
-use any and all kinds of role objects with that type.  (Assuming, of course,
+support a type that otherwise can't be used with add-ons, you should be able to
+use any and all kinds of add-on objects with that type.  (Assuming, of course,
 that you can implement a suitable storage mechanism!)
 
 Finally, a few words regarding garbage collection.  If you don't want to create
-a reference cycle, don't store a reference to your subject in your role.  Even
+a reference cycle, don't store a reference to your subject in your add-on. Even
 though the ``__init__`` and ``__new__`` messages get the subject passed in, you
 are not under any obligation to *store* the subject, and often won't need to.
-Usually, the code that is accessing the role knows what subject is in use, and
-can pass the subject to the role's methods if needed.  It's rare that the
-role really needs to keep a reference to the subject past the ``__new__()`` and
-``__init__()`` calls.
+Usually, the code that is accessing the add-on knows what subject is in use,
+and can pass the subject to the add-on's methods if needed.  It's rare that the
+add-on really needs to keep a reference to the subject past the ``__new__()``
+and ``__init__()`` calls.
 
-Role instances will usually be garbage collected at the same time as their
+Add-on instances will usually be garbage collected at the same time as their
 subject, unless there is some other reference to them.  If they keep a
 reference to their subject, their garbage collection may be delayed until
 Python's cycle collector is run.  But if they don't keep a reference, they will
@@ -260,21 +260,21 @@ usually be deleted as soon as the subject is::
     >>> del something
     deleting <weakref at ...; dead>
 
-(Roles that are stored outside the instance dictionary of their subject,
+(Add-ons that are stored outside the instance dictionary of their subject,
 however, may take slightly longer, as Python processes weak reference
 callbacks.)
 
-It is also *not* recommended that you have ``__del__`` methods on your role
+It is also *not* recommended that you have ``__del__`` methods on your add-on
 objects, especially if you keep a reference to your subject.  In such a case,
-garbage collection may become impossible, and both the role and its subject
+garbage collection may become impossible, and both the add-on and its subject
 would "leak" (i.e., take up memory forever without being recoverable).
 
 
-Class Roles
------------
+Class Add-Ons
+-------------
 
-Sometimes, it's useful to attach roles to classes instead of instances.  You
-could use normal ``Role`` classes, of course, as they work just fine with both
+Sometimes, it's useful to attach add-ons to classes instead of instances.  You
+could use normal ``AddOn`` classes, of course, as they work just fine with both
 classic classes and new-style types -- even built-ins::
 
     >>> Persistence.exists_for(int)
@@ -297,19 +297,19 @@ classic classes and new-style types -- even built-ins::
     >>> Persistence.exists_for(X)
     True
 
-But, sometimes you have roles that are specifically intended for adding
+But, sometimes you have add-ons that are specifically intended for adding
 metadata to classes -- perhaps by way of class or method decorators.  In such
-a case, you need a way to access the role *before* its subject even exists!
+a case, you need a way to access the add-on *before* its subject even exists!
 
-The ``ClassRole`` base class provides a mechanism for this.  It adds an extra
-classmethod, ``for_enclosing_class()``, that you can use to access the role
+The ``ClassAddOn`` base class provides a mechanism for this.  It adds an extra
+classmethod, ``for_enclosing_class()``, that you can use to access the add-on
 for the class that is currently being defined in the scope that invoked the
 caller.  For example, suppose we want to have a method decorator that adds
 the method to some class-level registry::
 
-    >>> from peak.util.roles import ClassRole
+    >>> from peak.util.addons import ClassAddOn
 
-    >>> class SpecialMethodRegistry(ClassRole):
+    >>> class SpecialMethodRegistry(ClassAddOn):
     ...     def __init__(self, subject):
     ...         self.special_methods = {}
     ...         super(SpecialMethodRegistry, self).__init__(subject)
@@ -335,7 +335,7 @@ the method to some class-level registry::
     >>> SpecialMethodRegistry(Demo2).special_methods
     {'dummy': <function dummy at ...>}
 
-You can of course use the usual role API for class roles::
+You can of course use the usual add-on API for class add-ons::
 
     >>> SpecialMethodRegistry.exists_for(int)
     False
@@ -351,24 +351,24 @@ naturally::
     >>> SpecialMethodRegistry.delete_from(Demo)
     Traceback (most recent call last):
       ...
-    TypeError: ClassRoles cannot be deleted
+    TypeError: ClassAddOns cannot be deleted
 
 
 Delayed Initialization
 ~~~~~~~~~~~~~~~~~~~~~~
 
-When a class role is initialized, the class may not exist yet.  In this case,
+When a class add-on is initialized, the class may not exist yet.  In this case,
 ``None`` is passed as the first argument to the ``__new__`` and ``__init__``
-methods.  You must be able to handle this case correctly, if your role will
+methods.  You must be able to handle this case correctly, if your add-on will
 be accessed inside a class definition with ``for_enclosing_class()``.
 
 You can, however, define a ``created_for()`` instance method that will be
 called as soon as the actual class is available.  It is also called by the
-default ``__init__`` method, if the role is initially created for a class that
-already exists.  Either way, the ``created_for()`` method should be called at
-most once for any given role instance.  For example::
+default ``__init__`` method, if the add-on is initially created for a class
+that already exists.  Either way, the ``created_for()`` method should be called
+at most once for any given add-on instance.  For example::
 
-    >>> class SpecialMethodRegistry(ClassRole):
+    >>> class SpecialMethodRegistry(ClassAddOn):
     ...     def __init__(self, subject):
     ...         print "init called for", subject
     ...         self.special_methods = {}
@@ -385,9 +385,9 @@ most once for any given role instance.  For example::
     created for Demo
 
 Above, ``__init__`` was called with ``None`` since the type didn't exist yet.
-However, accessing the role for an existing type (that doesn't have the role
-yet) will call ``__init__`` with the type, and the default implementation of
-``ClassRole.__init__`` will also call ``created_for()`` for us, when it sees
+However, accessing the add-on for an existing type (that doesn't have the add-
+on yet) will call ``__init__`` with the type, and the default implementation of
+``ClassAddOn.__init__`` will also call ``created_for()`` for us, when it sees
 the subject is not ``None``::
 
     >>> SpecialMethodRegistry(float)
@@ -402,35 +402,35 @@ One of the most useful features of having this ``created_for()`` method is
 that it allows you to set up class-level metadata that involves inherited
 settings from base classes.  In ``created_for()``, you have access to the
 class' ``__bases__`` and or ``__mro__``, and you can just ask for an instance
-of the same role for those base classes, then incorporate their data into your
-own instance as appropriate.  You are guaranteed that any such roles you access
-will already be initialized, including having their ``created_for()`` method
-called.
+of the same add-on for those base classes, then incorporate their data into
+your own instance as appropriate.  You are guaranteed that any such add-ons you
+access will already be initialized, including having their ``created_for()``
+method called.
 
-Since this works recursively, and because class roles can be attached even to
+Since this works recursively, and because class add-ons can be attached even to
 built-in types like ``object``, the work of creating a correct class metadata
 registry is immensely simplified, compared to having to special case such base
 classes, check for bases where no metadata was added or defined, etc.
 
-Instead, classes that didn't define any metadata will just have a role instance
-containing whatever was setup by your role's ``__init__()`` method, plus
-whatever additional data was added by its ``created_for()`` method.
+Instead, classes that didn't define any metadata will just have an add-on
+instance containing whatever was setup by your add-on's ``__init__()`` method,
+plus whatever additional data was added by its ``created_for()`` method.
 
-Thus, metadata accumulation using class roles can actually be simpler than
+Thus, metadata accumulation using class add-ons can actually be simpler than
 doing the same things with metaclasses, since metaclasses can't be
-retroactively added to existing classes.  Of course, class roles can't entirely
-replace metaclasses or base class mixins, but for the things they *can* do,
-they are much easier to implement correctly.
+retroactively added to existing classes.  Of course, class add-ons can't
+entirely replace metaclasses or base class mixins, but for the things they
+*can* do, they are much easier to implement correctly.
 
 
 Keys, Decoration, and ``for_enclosing_class()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Class roles can have role keys, just like regular roles, and they're
+Class add-ons can have add-on keys, just like regular add-ons, and they're
 implemented in the same way.  And, you can pass the extra arguments as
 positional arguments to ``for_enclosing_class()``.  For example::
 
-    >>> class Index(ClassRole):
+    >>> class Index(ClassAddOn):
     ...     def __init__(self, subject, expr):
     ...         self.expr = expr
     ...         self.funcs = []
@@ -521,17 +521,17 @@ any extra positional arguments needed to create the key.
 Class Registries (NEW in version 0.6)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For many of common class role use cases, you just want a dictionary-like object
+For many of common class add-on use cases, you just want a dict-like object
 with "inheritance" for the values in base classes.  The ``Registry`` base class
-provides this behavior, by subclassing ``ClassRole`` and the Python ``dict``
-builtin type, to create a class role that's also a dictionary.  It then
+provides this behavior, by subclassing ``ClassAddOn`` and the Python ``dict``
+builtin type, to create a class add-on that's also a dictionary.  It then
 overrides the ``created_for()`` method to automatically populate itself with
 any inherited values from base classes.
 
 Let's define a ``MethodGoodness`` registry that will store a "goodness"
 rating for methods::
 
-    >>> from peak.util.roles import Registry
+    >>> from peak.util.addons import Registry
 
     >>> class MethodGoodness(Registry):
     ...     """Dictionary of method goodness"""
@@ -609,33 +609,37 @@ useful for catching errors in class definitions, e.g.:
 Threading Concerns
 ------------------
 
-Role lookup and creation is thread-safe (i.e. race-condition free), so long as
-the role key contains no objects with ``__hash__`` or ``__equals__`` methods
-written in Python (as opposed to C).  So, unkeyed roles, or roles whose keys
-consist only of instances of built-in types (recursively, in the case of
-tuples) or types that inherit their ``__hash__`` or ``__equals__`` methods from
-built-in types, can be initialized in a thread-safe manner.
+Add-on lookup and creation is thread-safe (i.e. race-condition free), so long
+as the add-on key contains no objects with ``__hash__`` or ``__equals__``
+methods involve any Python code (as opposed to being pure C code that doesn't
+call any Python code).  So, unkeyed add-ons, or add-ons whose keys consist only
+of instances of built-in types (recursively, in the case of tuples) or types
+that inherit their ``__hash__`` and ``__equals__`` methods from built-in types,
+can be initialized in a thread-safe manner.
 
-This does *not* mean, however, that two or more role instances can't be created
-for the same subject at the same time!  Code in a role class' ``__new__`` or
-``__init__`` methods **must not** assume that it will in fact be the only role
-instance attached to its subject, if you wish the code to be thread-safe.
+This does *not* mean, however, that two or more add-on instances can't be
+created for the same subject at the same time!  Code in an add-on class'
+``__new__`` or ``__init__`` methods **must not** assume that it will in fact be
+the only add-on instance attached to its subject, if you wish the code to be
+thread-safe.
 
-This is because the Role access machinery allows multiple threads to *create*
-a role instance at the same time, but only one of those objects will *win* the
-race to become "the" role instance, and no thread can know in advance whether
-it will win.  Thus, if you wish your Role instances to do something *to* their
-constructor arguments at initialization time, you must either give up on your
-role being thread-safe, or use some other locking mechanism.
+This is because the ``AddOn`` access machinery allows multiple threads to
+*create* an add-on instance at the same time, but only one of those objects
+will *win* the race to become "the" add-on instance, and no thread can know in
+advance whether it will win.  Thus, if you wish your ``AddOn`` instances to do
+something *to* their constructor arguments at initialization time, you must
+either give up on your add-on being thread-safe, or use some other locking
+mechanism.
 
-Of course, role initialization is only one small part of the overall thread-
-safety puzzle.  Unless your role exists only to compute some immutable metadata
-about its subject, the rest of your role's methods need to be thread-safe also.
+Of course, add-on initialization is only one small part of the overall thread-
+safety puzzle.  Unless your add-on exists only to compute some immutable
+metadata about its subject, the rest of your add-on's methods need to be
+thread-safe also.
 
 One way to do that, is to use a ``@synchronized`` decorator, combined with a
-``Locking`` role::
+``Locking`` add-on::
 
-    >>> class Locking(Role):
+    >>> class Locking(AddOn):
     ...     def __init__(self, subject):
     ...         from threading import RLock
     ...         self.lock = RLock()
@@ -667,17 +671,18 @@ One way to do that, is to use a ``@synchronized`` decorator, combined with a
     ping
     released
 
-If the ``Locking()`` role constructor were not thread-safe, this decorator would
-not be able to do its job correctly, because two threads accessing an object
-that didn't *have* the role yet, could end up locking two different locks, and
-proceeding to run the supposedly-"synchronized" method at the same time!
+If the ``Locking()`` add-on constructor were not thread-safe, this decorator
+would not be able to do its job correctly, because two threads accessing an
+object that didn't *have* the add-on yet, could end up locking two different
+locks, and proceeding to run the supposedly-"synchronized" method at the same
+time!
 
-In general, thread-safety is harder than it looks.  But at least you don't have
-to worry about this one tiny part of correctly implementing it.
+(In general, thread-safety is harder than it looks.  But at least you don't have
+to worry about this one tiny part of correctly implementing it.)
 
 Of course, synchronized methods will be slower than normal methods, which is
-why ObjectRoles doesn't do anything besides that one small part of the thread-
-safety puzzle, to avoid penalizing non-threaded code.  As the PEAK motto says,
+why AddOns doesn't do anything besides that one small part of the thread-safety
+puzzle, to avoid penalizing non-threaded code.  As the PEAK motto says,
 STASCTAP! (Simple Things Are Simple, Complex Things Are Possible.)
 
 

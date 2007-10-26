@@ -2,12 +2,12 @@ from peak.util.decorators import decorate, decorate_class, enclosing_frame
 from weakref import ref
 import sys
 
-__all__ = ['Role', 'ClassRole', 'Registry', 'roledict_for']
+__all__ = ['AddOn', 'ClassAddOn', 'Registry', 'addons_for']
 
-_roledicts = {}
+_addons = {}
 
-def roledict_for(ob):
-    """Get the dictionary that should contain roles for `ob`"""
+def addons_for(ob):
+    """Get the dictionary that should contain add-ons for `ob`"""
     try:
         d = ob.__dict__
         sd = d.setdefault
@@ -15,9 +15,9 @@ def roledict_for(ob):
     except (AttributeError, TypeError):
         r = ref(ob)
         try:
-            return _roledicts[r]
+            return _addons[r]
         except KeyError:
-            return _roledicts.setdefault(ref(ob, _roledicts.__delitem__), {})
+            return _addons.setdefault(ref(ob, _addons.__delitem__), {})
 
 
 def additional_tests():
@@ -39,38 +39,38 @@ def additional_tests():
 
 
 
-class Role(object):
+class AddOn(object):
     """Attach extra state to (almost) any object"""
 
     __slots__ = ()
 
     class __metaclass__(type):
         def __call__(cls, ob, *data):
-            a = roledict_for(ob)
-            role_key = cls.role_key(*data)
+            a = addons_for(ob)
+            addon_key = cls.addon_key(*data)
             try:
-                return a[role_key]
+                return a[addon_key]
             except KeyError:
                 # Use setdefault() to prevent race conditions
-                ob = a.setdefault(role_key, type.__call__(cls, ob, *data))
+                ob = a.setdefault(addon_key, type.__call__(cls, ob, *data))
                 return ob
 
     decorate(classmethod)
-    def role_key(cls, *args):
+    def addon_key(cls, *args):
         if args: return (cls,)+args
         return cls
 
     decorate(classmethod)
     def exists_for(cls, ob, *key):
         """Does an aspect of this type for the given key exist?"""
-        return cls.role_key(*key) in roledict_for(ob)
+        return cls.addon_key(*key) in addons_for(ob)
 
     decorate(classmethod)
     def delete_from(cls, ob, *key):
         """Ensure an aspect of this type for the given key does not exist"""
-        a = roledict_for(ob)
+        a = addons_for(ob)
         try:
-            del a[cls.role_key(*key)]
+            del a[cls.addon_key(*key)]
         except KeyError:
             pass
 
@@ -80,22 +80,22 @@ class Role(object):
 
 
 
-class ClassRole(Role):
+class ClassAddOn(AddOn):
     """Attachment/annotation for classes and types"""
     __slots__ = ()
 
-    class __metaclass__(Role.__class__):
+    class __metaclass__(AddOn.__class__):
         def __call__(cls, ob, *data):
-            role_key = cls.role_key(*data)
+            addon_key = cls.addon_key(*data)
             d = ob.__dict__
-            if role_key in d:
-                return d[role_key]
-            d2 = roledict_for(ob)
+            if addon_key in d:
+                return d[addon_key]
+            d2 = addons_for(ob)
             try:
-                return d2[role_key]
+                return d2[addon_key]
             except KeyError:
                 # Use setdefault() to prevent race conditions
-                ob = d2.setdefault(role_key, type.__call__(cls, ob, *data))
+                ob = d2.setdefault(addon_key, type.__call__(cls, ob, *data))
                 return ob
 
     decorate(classmethod)
@@ -124,12 +124,12 @@ class ClassRole(Role):
     decorate(classmethod)
     def for_frame(cls, frame, *args):
         a = enclosing_frame(frame).f_locals
-        role_key = cls.role_key(*args)
+        addon_key = cls.addon_key(*args)
         try:
-            return a[role_key]
+            return a[addon_key]
         except KeyError:
             # Use setdefault() to prevent race conditions
-            ob = a.setdefault(role_key, type.__call__(cls, None, *args))
+            ob = a.setdefault(addon_key, type.__call__(cls, None, *args))
             # we use a lambda here so that if we are a registry, Python 2.5
             # won't consider our method equal to some other registry's method
             decorate_class(lambda c: ob.__decorate(c), frame=frame)
@@ -138,13 +138,13 @@ class ClassRole(Role):
     decorate(classmethod)
     def exists_for(cls, ob, *key):
         """Does an aspect of this type for the given key exist?"""
-        role_key = cls.role_key(*key)
-        return role_key in ob.__dict__ or role_key in roledict_for(ob)
+        addon_key = cls.addon_key(*key)
+        return addon_key in ob.__dict__ or addon_key in addons_for(ob)
 
     decorate(classmethod)
     def delete_from(cls, ob, *key):
-        """Class Roles are not deletable!"""
-        raise TypeError("ClassRoles cannot be deleted")
+        """Class AddOns are not deletable!"""
+        raise TypeError("ClassAddOns cannot be deleted")
 
     def __decorate(self, cls):
         self.created_for(cls)
@@ -162,8 +162,8 @@ class ClassRole(Role):
 
 
 
-class Registry(ClassRole, dict):
-    """ClassRole that's a dictionary with mro-based inheritance"""
+class Registry(ClassAddOn, dict):
+    """ClassAddOn that's a dictionary with mro-based inheritance"""
 
     __slots__ = ()
 

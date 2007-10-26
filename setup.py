@@ -6,7 +6,7 @@ ez_setup.use_setuptools()
 from setuptools import setup
 
 # Metadata
-PACKAGE_NAME = "ObjectRoles"
+PACKAGE_NAME = "AddOns"
 PACKAGE_VERSION = "0.7"
 PACKAGES = ['peak', 'peak.util']
 
@@ -27,14 +27,14 @@ def get_description():
 setup(
     name=PACKAGE_NAME,
     version=PACKAGE_VERSION,
-    description="Separation of concerns (basic AOP) using 'role' adapters",
+    description="Dynamically extend other objects with AddOns (formerly ObjectRoles)",
     long_description = open('README.txt').read(), # get_description(),
     install_requires=['DecoratorTools>=1.5'],
     author="Phillip J. Eby",
     author_email="peak@eby-sarna.com",
     license="PSF or ZPL",
-    url="http://www.python.org/pypi/ObjectRoles",
-    test_suite = 'peak.util.roles',
+    url="http://www.python.org/pypi/AddOns",
+    test_suite = 'peak.util.addons',
     packages = PACKAGES,
     namespace_packages = PACKAGES,
 )
