@@ -33,7 +33,7 @@ setup(
     author="Phillip J. Eby",
     author_email="peak@eby-sarna.com",
     license="PSF or ZPL",
-    url="http://www.python.org/pypi/AddOns",
+    url="http://pypi.python.org/pypi/AddOns",
     test_suite = 'peak.util.addons',
     packages = PACKAGES,
     namespace_packages = PACKAGES,
