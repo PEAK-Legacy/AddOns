@@ -29,7 +29,7 @@ setup(
     version=PACKAGE_VERSION,
     description="Dynamically extend other objects with AddOns (formerly ObjectRoles)",
     long_description = open('README.txt').read(), # get_description(),
-    install_requires=['DecoratorTools>=1.5'],
+    install_requires=['DecoratorTools>=1.6'],
     author="Phillip J. Eby",
     author_email="peak@eby-sarna.com",
     license="PSF or ZPL",

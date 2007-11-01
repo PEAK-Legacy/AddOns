@@ -1,4 +1,4 @@
-from peak.util.decorators import decorate, decorate_class, enclosing_frame
+from peak.util.decorators import decorate, decorate_class, enclosing_frame, classy
 from weakref import ref
 import sys
 
@@ -39,21 +39,21 @@ def additional_tests():
 
 
 
-class AddOn(object):
+class AddOn(classy):
     """Attach extra state to (almost) any object"""
 
     __slots__ = ()
 
-    class __metaclass__(type):
-        def __call__(cls, ob, *data):
-            a = addons_for(ob)
-            addon_key = cls.addon_key(*data)
-            try:
-                return a[addon_key]
-            except KeyError:
-                # Use setdefault() to prevent race conditions
-                ob = a.setdefault(addon_key, type.__call__(cls, ob, *data))
-                return ob
+    decorate(classmethod)
+    def __class_call__(cls, ob, *data):
+        a = addons_for(ob)
+        addon_key = cls.addon_key(*data)
+        try:
+            return a[addon_key]
+        except KeyError:
+            # Use setdefault() to prevent race conditions
+            ob = a.setdefault(addon_key, super(AddOn, cls).__class_call__(ob, *data))
+            return ob
 
     decorate(classmethod)
     def addon_key(cls, *args):
@@ -84,19 +84,22 @@ class ClassAddOn(AddOn):
     """Attachment/annotation for classes and types"""
     __slots__ = ()
 
-    class __metaclass__(AddOn.__class__):
-        def __call__(cls, ob, *data):
-            addon_key = cls.addon_key(*data)
-            d = ob.__dict__
-            if addon_key in d:
-                return d[addon_key]
-            d2 = addons_for(ob)
-            try:
-                return d2[addon_key]
-            except KeyError:
-                # Use setdefault() to prevent race conditions
-                ob = d2.setdefault(addon_key, type.__call__(cls, ob, *data))
-                return ob
+    decorate(classmethod)
+    def __class_call__(cls, ob, *data):
+        addon_key = cls.addon_key(*data)
+        d = ob.__dict__
+        if addon_key in d:
+            return d[addon_key]
+        d2 = addons_for(ob)
+        try:
+            return d2[addon_key]
+        except KeyError:
+            # Use setdefault() to prevent race conditions
+            ob = d2.setdefault(
+                addon_key,
+                super(ClassAddOn, cls).__class_call__(ob, *data)
+            )
+            return ob
 
     decorate(classmethod)
     def for_enclosing_class(cls, *args, **kw):
@@ -111,9 +114,6 @@ class ClassAddOn(AddOn):
         if kw:
             raise TypeError("Unexpected keyword arguments", kw)
         return cls.for_frame(frame, *args)
-
-
-
 
 
 
