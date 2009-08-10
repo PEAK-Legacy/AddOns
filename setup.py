@@ -7,7 +7,7 @@ from setuptools import setup
 
 # Metadata
 PACKAGE_NAME = "AddOns"
-PACKAGE_VERSION = "0.7"
+PACKAGE_VERSION = "0.8"
 PACKAGES = ['peak', 'peak.util']
 
 def get_description():
