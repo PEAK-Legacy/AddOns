@@ -34,7 +34,7 @@ to disk yet::
     ...         self.saved = False
     ...     def save_if_needed(self):
     ...         if not self.saved:
-    ...             print "saving"
+    ...             print("saving")
     ...             self.saved = True
 
     >>> class Thing: pass
@@ -139,8 +139,8 @@ exist for a given object::
 
     >>> something = Thing()
     >>> Index(something, "x>y")["a"] = "b"
-    >>> dir(something)
-    ['__doc__', '__module__', (<class 'Index'>, 'x>y')]
+    >>> [key for key in something.__dict__ if not isinstance(key, str)]
+    [(<class 'Index'>, 'x>y')]
 
     >>> "a" in Index(something, "z<22")
     False
@@ -151,8 +151,10 @@ exist for a given object::
     >>> Index(something, "x>y").expression
     'x>y'
 
-    >>> dir(something)
-    ['__doc__', '__module__', (<class 'Index'>, 'x>y'), (<class 'Index'>, 'z<22')]
+    >>> keys = [key for key in something.__dict__ if not isinstance(key, str)]
+    >>> keys.sort()
+    >>> keys
+    [(<class 'Index'>, 'x>y'), (<class 'Index'>, 'z<22')]
 
     >>> Index.exists_for(something, 'x>y')
     True
@@ -187,7 +189,7 @@ error::
     >>> Leech(something, 42)
     Traceback (most recent call last):
       ...
-    TypeError: addon_key() takes exactly 1 argument (2 given)
+    TypeError: addon_key() takes exactly 1 ...argument (2 given)
 
 Naturally, your ``addon_key()`` and ``__init__()`` (and/or ``__new__()``)
 methods should also agree on how many arguments there can be, and what they
@@ -252,7 +254,7 @@ Python's cycle collector is run.  But if they don't keep a reference, they will
 usually be deleted as soon as the subject is::
 
     >>> def deleting(r):
-    ...     print "deleting", r
+    ...     print("deleting "+str(r))
 
     >>> from weakref import ref
 
@@ -370,12 +372,12 @@ at most once for any given add-on instance.  For example::
 
     >>> class SpecialMethodRegistry(ClassAddOn):
     ...     def __init__(self, subject):
-    ...         print "init called for", subject
+    ...         print("init called for "+str(subject))
     ...         self.special_methods = {}
     ...         super(SpecialMethodRegistry, self).__init__(subject)
     ...
     ...     def created_for(self, cls):
-    ...         print "created for", cls.__name__
+    ...         print("created for "+cls.__name__)
 
     >>> class Demo:
     ...     def dummy(self, foo):
@@ -391,7 +393,7 @@ on yet) will call ``__init__`` with the type, and the default implementation of
 the subject is not ``None``::
 
     >>> SpecialMethodRegistry(float)
-    init called for <type 'float'>
+    init called for <... 'float'>
     created for float
     <SpecialMethodRegistry object at ...>
 
@@ -644,11 +646,11 @@ One way to do that, is to use a ``@synchronized`` decorator, combined with a
     ...         from threading import RLock
     ...         self.lock = RLock()
     ...     def acquire(self):
-    ...         print "acquiring"
+    ...         print("acquiring")
     ...         self.lock.acquire()
     ...     def release(self):
     ...         self.lock.release()
-    ...         print "released"
+    ...         print("released")
 
     >>> def synchronized(func):
     ...     def wrapper(self, *__args,**__kw):
@@ -663,7 +665,7 @@ One way to do that, is to use a ``@synchronized`` decorator, combined with a
 
     >>> class AnotherThing:
     ...     def ping(self):
-    ...         print "ping"
+    ...         print("ping")
     ...     ping = synchronized(ping)
 
     >>> AnotherThing().ping()
